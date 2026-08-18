@@ -109,17 +109,19 @@ flowchart TD
 
 모든 비동기 SDK 호출은 콜백 결과를 기다리는 코루틴으로 감쌌습니다. 구현은 [`CharacterRepository.cs`](./Assets/Scripts/Data/CharacterRepository.cs)에 모여 있습니다.
 
-| 샘플 함수 | 호출하는 뒤끝 SDK | 역할 |
-| --- | --- | --- |
-| `LoginOrRegister(id, password, completed)` | `Backend.InitializeAsync`, `Backend.BMember.CustomLogin`, `Backend.BMember.CustomSignUp` | SDK를 초기화하고 계정에 로그인합니다. `401 bad customId`일 때만 회원가입 후 재로그인합니다. |
-| `ElevateToMultiCharacter(completed)` | `Backend.BMember.Elevate` | 로그인된 싱글 캐릭터 계정을 멀티 캐릭터 계정으로 전환합니다. |
-| `LoadCharacters(completed)` | `Backend.LocationProperties.UpdateLocationProperties`, `Backend.LocationProperties.CustomizeLocationProperties`(조회 실패 시), `Backend.MultiCharacter.Character.GetCharacterList` | 계정의 캐릭터 목록과 각 캐릭터의 `UserData`를 함께 조회합니다. 위치 정보 조회 실패 시 샘플 기본값을 적용합니다. |
-| `CreateCharacter(name, portraitIndex, completed)` | `Backend.MultiCharacter.Character.CreateCharacter`, `Backend.MultiCharacter.Character.SelectCharacter`, `Backend.GameData.Insert` | 캐릭터를 생성하고 바로 선택한 뒤 초기 `UserData`를 삽입합니다. 완료 후 계정 컨텍스트로 복귀합니다. |
-| `DeleteCharacter(id, completed)` | `Backend.MultiCharacter.Character.DeleteCharacter` | 캐릭터의 `uuid`와 `inDate`로 캐릭터를 삭제합니다. 삭제한 캐릭터는 복구하지 않습니다. |
-| `SelectAndLoadCharacter(id, completed)` | `Backend.MultiCharacter.Character.SelectCharacter`, `Backend.GameData.GetMyData`, `Backend.GameData.Insert` | 캐릭터로 로그인하고 `UserData`를 조회합니다. 데이터 행이 없으면 초기값을 삽입합니다. |
-| `MarkDirty()` | 없음 | 전투 보상이나 강화로 데이터가 바뀌었음을 revision 값으로 기록합니다. |
-| `SaveSelected(completed)` | `Backend.GameData.Insert`, `Backend.GameData.UpdateV2` | 변경된 선택 캐릭터만 저장합니다. 저장 중 발생한 추가 변경은 다음 저장 대상으로 남깁니다. |
-| `ReturnToAccount(completed)` | `Backend.BMember.Logout`, `Backend.BMember.CustomLogin` | 캐릭터 컨텍스트에서 로그아웃하고 계정 컨텍스트로 다시 로그인합니다. |
+표에서는 화면 폭을 줄이기 위해 `Backend`와 하위 클래스 접두어를 생략했습니다.
+
+| 샘플 함수 | 기능 및 호출 SDK |
+| --- | --- |
+| `LoginOrRegister` | SDK를 초기화하고 계정에 로그인합니다. `401 bad customId`일 때만 회원가입 후 재로그인합니다.<br>**SDK:** `InitializeAsync`<br>`CustomLogin`<br>`CustomSignUp` |
+| <code>ElevateTo<wbr>MultiCharacter</code> | 로그인된 싱글 캐릭터 계정을 멀티 캐릭터 계정으로 전환합니다.<br>**SDK:** `Elevate` |
+| `LoadCharacters` | 캐릭터 목록과 각 캐릭터의 `UserData`를 함께 조회합니다. 위치 정보 조회 실패 시 샘플 기본값을 적용합니다.<br>**SDK:** <code>UpdateLocation<wbr>Properties</code><br><code>CustomizeLocation<wbr>Properties</code>(조회 실패 시)<br>`GetCharacterList` |
+| `CreateCharacter` | 캐릭터를 생성·선택하고 초기 `UserData`를 삽입한 뒤 계정 컨텍스트로 복귀합니다.<br>**SDK:** `CreateCharacter`<br>`SelectCharacter`<br>`Insert` |
+| `DeleteCharacter` | `uuid`와 `inDate`로 캐릭터를 영구 삭제합니다.<br>**SDK:** `DeleteCharacter` |
+| <code>SelectAndLoad<wbr>Character</code> | 캐릭터로 로그인하고 `UserData`를 조회합니다. 데이터 행이 없으면 초기값을 삽입합니다.<br>**SDK:** `SelectCharacter`<br>`GetMyData`<br>`Insert` |
+| `MarkDirty` | 전투 보상이나 강화로 데이터가 바뀌었음을 revision 값으로 기록합니다.<br>**SDK:** 호출 없음 |
+| `SaveSelected` | 변경된 선택 캐릭터만 저장합니다. 저장 중 발생한 추가 변경은 다음 저장 대상으로 남깁니다.<br>**SDK:** `Insert`<br>`UpdateV2` |
+| `ReturnToAccount` | 캐릭터 컨텍스트에서 로그아웃하고 계정 컨텍스트로 다시 로그인합니다.<br>**SDK:** `Logout`<br>`CustomLogin` |
 
 ### 로그인과 계정 전환
 
