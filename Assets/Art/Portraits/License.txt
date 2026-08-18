@@ -1,0 +1,4 @@
+Character portraits (Portrait_00.png - Portrait_02.png)
+
+Provided by the project owner (source files: portraits_avatars_*.png).
+Confirm redistribution rights before publishing this sample publicly.
