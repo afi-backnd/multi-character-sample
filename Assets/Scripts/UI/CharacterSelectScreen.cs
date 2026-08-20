@@ -37,7 +37,7 @@ namespace MultiCharacterSample.UI
 
         IEnumerator LoadCharacters(bool keepScroll)
         {
-            SetBusy(true, "캐릭터 목록 조회 중...");
+            SetBusy(true);
             flow.ShowLoading("캐릭터 목록 불러오는 중...");
 
             bool success = false;
@@ -49,15 +49,17 @@ namespace MultiCharacterSample.UI
             });
 
             Rebuild(keepScroll);
-            SetBusy(false, success ? null : error);
+            SetBusy(false);
             flow.HideLoading();
+            if (!success) confirmPopup.OpenAlert(error);
         }
 
         void Rebuild(bool keepScroll)
         {
             float scroll = scrollRect.horizontalNormalizedPosition;
             var characters = CharacterRepository.Characters;
-            int slotCount = Mathf.Max(10, characters.Count + 1);
+            // 서버 제한(최대 20개)보다 슬롯을 1개 더 만들어, 마지막 슬롯의 생성 요청이 서버에서 거절되는 것을 보여준다.
+            int slotCount = Mathf.Max(CharacterRepository.MaxCharacters + 1, characters.Count + 1);
 
             if (slots.Count != slotCount)
             {
@@ -98,10 +100,8 @@ namespace MultiCharacterSample.UI
             for (int i = 0; i < slots.Count; i++)
                 slots[i].SetSelected(i == index && !slots[i].IsCreateSlot);
 
-            bool isCharacter = IsCharacterSelected();
-            startButton.interactable = !busy && isCharacter;
-            startButtonLabel.text = isCharacter ? "게임 시작" : "캐릭터를 선택하세요";
-            if (isCharacter) CharacterRepository.LastSelectedId = slots[index].CharacterId;
+            RefreshStartButton();
+            if (IsCharacterSelected()) CharacterRepository.LastSelectedId = slots[index].CharacterId;
         }
 
         bool IsCharacterSelected()
@@ -109,14 +109,18 @@ namespace MultiCharacterSample.UI
             return selectedIndex >= 0 && selectedIndex < slots.Count && !slots[selectedIndex].IsCreateSlot;
         }
 
-        void SetBusy(bool value, string status)
+        void SetBusy(bool value)
         {
             busy = value;
-            startButton.interactable = !busy && IsCharacterSelected();
-            if (!string.IsNullOrEmpty(status))
-                startButtonLabel.text = status;
-            else
-                startButtonLabel.text = IsCharacterSelected() ? "게임 시작" : "캐릭터를 선택하세요";
+            RefreshStartButton();
+        }
+
+        /// <summary>시작 버튼은 라벨만 담당한다. 진행 상황은 로딩 오버레이, 실패 사유는 알림 팝업이 알린다.</summary>
+        void RefreshStartButton()
+        {
+            bool isCharacter = IsCharacterSelected();
+            startButton.interactable = !busy && isCharacter;
+            startButtonLabel.text = isCharacter ? "게임 시작" : "캐릭터를 선택하세요";
         }
 
         void ScrollTo(int index)
@@ -168,7 +172,7 @@ namespace MultiCharacterSample.UI
 
         IEnumerator CreateCharacter(string characterName, int portraitIndex)
         {
-            SetBusy(true, "캐릭터 생성 중...");
+            SetBusy(true);
             flow.ShowLoading("캐릭터 생성 중...");
 
             bool success = false;
@@ -192,7 +196,10 @@ namespace MultiCharacterSample.UI
             if (!string.IsNullOrEmpty(createdId))
                 yield return LoadCharacters(false);
             if (!success)
-                SetBusy(false, error);
+            {
+                SetBusy(false);
+                confirmPopup.OpenAlert(error);
+            }
         }
 
         void OnDeleteRequested(CharacterSlotView slot)
@@ -206,7 +213,7 @@ namespace MultiCharacterSample.UI
         IEnumerator DeleteCharacter(string id)
         {
             bool deletedSelection = id == CharacterRepository.LastSelectedId;
-            SetBusy(true, "캐릭터 삭제 중...");
+            SetBusy(true);
             flow.ShowLoading("캐릭터 삭제 중...");
 
             bool success = false;
@@ -220,7 +227,8 @@ namespace MultiCharacterSample.UI
 
             if (!success)
             {
-                SetBusy(false, error);
+                SetBusy(false);
+                confirmPopup.OpenAlert(error);
                 yield break;
             }
 
@@ -235,7 +243,7 @@ namespace MultiCharacterSample.UI
 
         IEnumerator SelectAndStartGame(string id)
         {
-            SetBusy(true, "플레이 정보 조회 중...");
+            SetBusy(true);
             flow.ShowLoading("플레이 정보 불러오는 중...");
 
             bool success = false;
@@ -257,7 +265,8 @@ namespace MultiCharacterSample.UI
                     flow.loginScreen.ShowMessage(error);
                     yield break;
                 }
-                SetBusy(false, error);
+                SetBusy(false);
+                confirmPopup.OpenAlert(error);
                 yield break;
             }
 

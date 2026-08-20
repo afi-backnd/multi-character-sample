@@ -16,7 +16,7 @@ Unity에서 [뒤끝(BACKND) 멀티 캐릭터](https://docs.backnd.com/sdk-docs/b
 
 ![캐릭터 선택 화면](./Captures/character-select.png)
 
-샘플 UI는 기본 10개 슬롯으로 구성했습니다. 좌우 스와이프로 확인이 가능합니다. 참고로 뒤끝 멀티 캐릭터 기능의 캐릭터 생성 수를 제한하지 않습니다.
+뒤끝 멀티 캐릭터는 계정당 캐릭터를 최대 20개까지 생성할 수 있습니다. 샘플 UI는 서버 제한보다 1개 많은 21개 슬롯으로 구성해, 마지막 슬롯에서 생성을 시도하면 서버가 반환하는 제한 응답을 그대로 확인할 수 있습니다. 좌우 스와이프로 전체 슬롯을 확인할 수 있습니다.
 
 ### 방치형 RPG
 
@@ -29,7 +29,7 @@ Unity에서 [뒤끝(BACKND) 멀티 캐릭터](https://docs.backnd.com/sdk-docs/b
 - 커스텀 계정 로그인 및 미가입 계정 자동 회원가입
 - 싱글 캐릭터 계정의 멀티 캐릭터 계정 전환
 - 계정에 속한 캐릭터 목록과 `UserData` 동시 조회
-- 캐릭터 생성, 선택, 삭제
+- 캐릭터 생성, 선택, 삭제와 서버 생성 제한(최대 20개) 응답 처리
 - 캐릭터별 게임 정보 조회, 신규 생성, 갱신
 - 자동 전투, 스테이지 진행, 골드 보상, 능력치 강화
 - 5분 주기, 로비 이동, 백그라운드 전환, 지원 플랫폼의 애플리케이션 종료 시 저장
@@ -48,7 +48,7 @@ Unity에서 [뒤끝(BACKND) 멀티 캐릭터](https://docs.backnd.com/sdk-docs/b
 
 ### 1. 뒤끝 프로젝트 준비
 
-[뒤끝 콘솔](https://developer.thebackend.io/)에서 멀티 캐릭터 기능을 사용할 수 있는 프로젝트를 준비합니다. 일반 프로젝트 키를 사용하면 로그인 화면에 `싱글 캐릭터 프로젝트입니다. 멀티 캐릭터 프로젝트 키로 변경하세요.`가 표시됩니다.
+[뒤끝 콘솔](https://console.thebackend.io/)에서 멀티 캐릭터 기능을 사용할 수 있는 프로젝트를 준비합니다. 일반 프로젝트 키를 사용하면 로그인 화면에 `싱글 캐릭터 프로젝트입니다. 멀티 캐릭터 프로젝트 키로 변경하세요.`가 표시됩니다.
 
 ### 2. `UserData` 테이블 생성
 
@@ -116,7 +116,7 @@ flowchart TD
 | `LoginOrRegister` | SDK를 초기화하고 계정에 로그인합니다. `401 bad customId`일 때만 회원가입 후 재로그인합니다.<br>**SDK:** `InitializeAsync`<br>`CustomLogin`<br>`CustomSignUp` |
 | <code>ElevateTo<wbr>MultiCharacter</code> | 로그인된 싱글 캐릭터 계정을 멀티 캐릭터 계정으로 전환합니다.<br>**SDK:** `Elevate` |
 | `LoadCharacters` | 캐릭터 목록과 각 캐릭터의 `UserData`를 함께 조회합니다. 위치 정보 조회 실패 시 샘플 기본값을 적용합니다.<br>**SDK:** <code>UpdateLocation<wbr>Properties</code><br><code>CustomizeLocation<wbr>Properties</code>(조회 실패 시)<br>`GetCharacterList` |
-| `CreateCharacter` | 캐릭터를 생성·선택하고 초기 `UserData`를 삽입한 뒤 계정 컨텍스트로 복귀합니다.<br>**SDK:** `CreateCharacter`<br>`SelectCharacter`<br>`Insert` |
+| `CreateCharacter` | 캐릭터를 생성·선택하고 초기 `UserData`를 삽입한 뒤 계정 컨텍스트로 복귀합니다. 생성 실패는 상태 코드로 구분해 `403`은 서버 생성 제한, `409`는 이름 중복으로 안내합니다.<br>**SDK:** `CreateCharacter`<br>`SelectCharacter`<br>`Insert` |
 | `DeleteCharacter` | `uuid`와 `inDate`로 캐릭터를 영구 삭제합니다.<br>**SDK:** `DeleteCharacter` |
 | <code>SelectAndLoad<wbr>Character</code> | 캐릭터로 로그인하고 `UserData`를 조회합니다. 데이터 행이 없으면 초기값을 삽입합니다.<br>**SDK:** `SelectCharacter`<br>`GetMyData`<br>`Insert` |
 | `MarkDirty` | 전투 보상이나 강화로 데이터가 바뀌었음을 revision 값으로 기록합니다.<br>**SDK:** 호출 없음 |
@@ -140,8 +140,10 @@ flowchart TD
 - 생성 카드에서 이름과 초상화를 선택하면 캐릭터 생성과 초기 `UserData` 저장을 연속 실행합니다.
 - 캐릭터 이름은 앞뒤 공백을 제거한 뒤 1~8자로 검사합니다.
 - 선택한 카드의 `uuid`와 `inDate`를 `SelectCharacter`에 전달한 뒤 게임 정보를 읽습니다.
-- 삭제 버튼은 확인 팝업을 거친 뒤 캐릭터를 영구 삭제합니다.
-- 샘플 UI는 기본 10개 슬롯을 제공하며, 캐릭터 생성 수에는 제한을 두지 않습니다.
+- 삭제 버튼은 확인 팝업(`삭제`/`취소`)을 거친 뒤 캐릭터를 영구 삭제합니다.
+- 샘플 UI는 서버 제한(최대 20개)보다 1개 많은 21개 슬롯을 제공합니다. 캐릭터 20개를 채운 뒤 마지막 슬롯에서 생성을 요청하면 서버가 `403 ForbiddenException`(`Forbidden character count can not exceed 20`)을 반환하며, 알림 팝업에 `캐릭터는 최대 20개까지 생성할 수 있습니다.`가 표시됩니다.
+- 생성 제한은 클라이언트에서 미리 막지 않습니다. 서버 응답으로 판정해야 다른 기기에서 캐릭터를 만든 경우에도 정확한 결과를 얻습니다.
+- 시작 버튼 라벨은 `게임 시작`과 `캐릭터를 선택하세요`만 표시합니다. 진행 상황은 로딩 오버레이가, 실패 사유는 알림 팝업이 알립니다. 고정 폭 버튼에 긴 문장을 넣으면 잘리기 때문입니다.
 
 ### 게임 정보와 저장
 

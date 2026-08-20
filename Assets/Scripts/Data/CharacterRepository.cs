@@ -16,6 +16,9 @@ namespace MultiCharacterSample.Data
     {
         const string TableName = "UserData";
 
+        /// <summary>뒤끝 서버가 허용하는 계정당 캐릭터 수. 클라이언트는 막지 않고 서버의 403 응답으로 확인한다.</summary>
+        public const int MaxCharacters = 20;
+
         static readonly List<CharacterData> characters = new List<CharacterData>();
         static readonly Dictionary<string, int> pendingPortraits = new Dictionary<string, int>();
 
@@ -211,6 +214,15 @@ namespace MultiCharacterSample.Data
                 : "계정 로그인에 실패했습니다.";
         }
 
+        /// <summary>캐릭터 생성 실패 사유를 사용자 문구로 변환한다.</summary>
+        static string DescribeCreateFailure(BackendReturnObject result)
+        {
+            // 403 ForbiddenException: 계정 캐릭터 수가 서버 제한(MaxCharacters)을 넘어선 경우.
+            if (result.GetStatusCode() == "403") return $"캐릭터는 최대 {MaxCharacters}개까지 생성할 수 있습니다.";
+            if (result.GetStatusCode() == "409") return "이미 사용 중인 이름입니다.";
+            return "캐릭터 생성에 실패했습니다.";
+        }
+
         public static IEnumerator LoadCharacters(Action<bool, string> completed)
         {
             if (!Backend.IsInitialized || !Backend.IsMultiAccountLogin)
@@ -283,7 +295,7 @@ namespace MultiCharacterSample.Data
             if (!result.IsSuccess())
             {
                 Debug.LogWarning($"[CharacterRepository] 캐릭터 생성 실패({result.GetStatusCode()}): {result.GetMessage()}");
-                completed(false, result.GetStatusCode() == "409" ? "이미 사용 중인 이름입니다." : "캐릭터 생성에 실패했습니다.", null);
+                completed(false, DescribeCreateFailure(result), null);
                 yield break;
             }
 
